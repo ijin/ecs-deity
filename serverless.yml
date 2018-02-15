@@ -1,0 +1,253 @@
+#
+# ECS Deity creates and destroys on-demand environments through separate ECS services
+#
+
+service: ${self:custom.${self:provider.stage}.sls_prefix, ''}ecs-deity
+
+provider:
+  name: aws
+  runtime: python2.7
+
+  stage: ${opt:stage, 'dev'}
+  region: ap-northeast-1
+  environment:
+    sns_arn: ${self:custom.${self:provider.stage}.sns_arn}
+    channel: ${self:custom.${self:provider.stage}.slack.channel}
+
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "lambda:InvokeFunction"
+        - "states:*"
+        - "application-autoscaling:*"
+        - "autoscaling:*"
+        - "cloudformation:*"
+        - "cloudwatch:*"
+        - "ec2:*"
+        - "ecs:*"
+        - "elasticloadbalancing:*"
+        - "events:*"
+        - "sns:Publish"
+        - "iam:List*"
+        - "iam:PassRole"
+        - "logs:CreateLogGroup"
+        - "logs:DescribeLogGroups"
+        - "logs:FilterLogEvents"
+      Resource: "*"
+
+package:
+  exclude:
+    - .git/**
+    - node_module/**
+    - ./*.yml
+    - ./*.json
+
+custom: ${file(conf.yml)}
+
+functions:
+  github:
+    handler: github.step_function
+    environment:
+      vpc_id: ${self:custom.${self:provider.stage}.vpc_id}
+      cluster: ${self:custom.${self:provider.stage}.cluster}
+      container_name: ${self:custom.${self:provider.stage}.container_name}
+      container_port: ${self:custom.${self:provider.stage}.container_port}
+      task_def: ${self:custom.${self:provider.stage}.task_def}
+      lb_arn: ${self:custom.${self:provider.stage}.lb_arn}
+      port_range: ${self:custom.${self:provider.stage}.port_range, '8000-8100'}
+      health_check_protocol: ${self:custom.${self:provider.stage}.health_check.protocol, ''}
+      health_check_port: ${self:custom.${self:provider.stage}.health_check.port, ''}
+      health_check_path: ${self:custom.${self:provider.stage}.health_check.path, ''}
+      health_check_interval: ${self:custom.${self:provider.stage}.health_check.interval, ''}
+      health_check_timeout: ${self:custom.${self:provider.stage}.health_check.timeout, ''}
+      health_check_healthy_count: ${self:custom.${self:provider.stage}.health_check.healthy_count, ''}
+      health_check_unhealthy_count: ${self:custom.${self:provider.stage}.health_check.unhealthy_count, ''}
+      health_check_matcher: ${self:custom.${self:provider.stage}.health_check.matcher, ''}
+      branch_prefix: ${self:custom.${self:provider.stage}.branch_prefix, ''}
+      create_sfn_arn: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-${self:provider.stage}-create
+      delete_sfn_arn: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-${self:provider.stage}-destroy
+    events:
+      - http:
+          path: github
+          method: post
+  create:
+    handler: ecs.create
+    timeout: 30
+  service_creation_status:
+    handler: ecs.service_creation_status
+    timeout: 30
+  destroy:
+    handler: ecs.destroy
+    timeout: 30
+  stop_tasks:
+    handler: ecs.stop_tasks
+    timeout: 30
+  task_status:
+    handler: ecs.task_status
+    timeout: 30
+  delete_service:
+    handler: ecs.delete_service
+    timeout: 30
+  service_status:
+    handler: ecs.service_status
+    timeout: 30
+  delete_listener_and_tg:
+    handler: ecs.delete_listener_and_tg
+    timeout: 30
+  delete_alb_tg:
+    handler: ecs.delete_alb_tg
+    timeout: 30
+  catch_sfn_error:
+    handler: catch.sfn_error
+    environment:
+      channel: ${self:custom.${self:provider.stage}.slack.channel}
+
+stepFunctions:
+  stateMachines:
+    ecs_deity_create:
+      name: ${self:service}-${self:provider.stage}-create
+      definition:
+        Comment: "Creates ECS service"
+        StartAt: ecs_create
+        States:
+          ecs_create:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-create
+            Catch:
+              - ErrorEquals:
+                - States.TaskFailed
+                - Lambda.Unknown
+                Next: catch_error
+            Next: service_exists
+          service_exists:
+            Type: Choice
+            Choices:
+              - Not:
+                  Variable: "$.branch"
+                  StringEquals: none
+                Next: wait_for_service_creation
+            Default: no_deployment
+          wait_for_service_creation:
+            Type: Wait
+            Seconds: 5
+            Next: service_creation_status
+          service_creation_status:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-service_creation_status
+            Next: is_service_created
+          is_service_created:
+            Type: Choice
+            Choices:
+              - Variable: "$.service_created"
+                BooleanEquals: true
+                Next: ecs_deploy
+              - Variable: "$.service_created"
+                BooleanEquals: false
+                Next: wait_for_service_creation
+            Default: wait_for_service_creation
+          ecs_deploy:
+            Type: Task
+            Resource: ${self:custom.${self:provider.stage}.deploy_lambda_arn}
+            Catch:
+              - ErrorEquals:
+                - States.TaskFailed
+                - Lambda.Unknown
+                Next: catch_error
+            End: true
+          no_deployment:
+            Type: Fail
+            Cause: Nothing to deploy!
+            Error: NothingToDeploy
+          catch_error:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-catch_sfn_error
+            End: true
+
+    ecs_deity_destroy:
+      name: ${self:service}-${self:provider.stage}-destroy
+      definition:
+        Comment: "Destroys ECS service"
+        TimeoutSeconds: 600
+        StartAt: ecs_destroy
+        States:
+          ecs_destroy:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-destroy
+            Catch:
+              - ErrorEquals:
+                - States.TaskFailed
+                - Lambda.Unknown
+                Next: catch_error
+            Next: stop_tasks
+          stop_tasks:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stop_tasks
+            Catch:
+              - ErrorEquals:
+                - States.TaskFailed
+                - Lambda.Unknown
+                Next: catch_error
+            Next: wait_for_tasks_to_stop
+          wait_for_tasks_to_stop:
+            Type: Wait
+            Seconds: 5
+            Next: task_status
+          task_status:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-task_status
+            Next: is_task_stopped
+          is_task_stopped:
+            Type: Choice
+            Choices:
+              - Variable: "$.task"
+                StringEquals: stopped
+                Next: delete_service
+              - Variable: "$.task"
+                StringEquals: running
+                Next: wait_for_tasks_to_stop
+            Default: wait_for_tasks_to_stop
+          delete_service:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-delete_service
+            Catch:
+              - ErrorEquals:
+                - States.TaskFailed
+                - Lambda.Unknown
+                Next: catch_error
+            Next: wait_for_service_deletion
+          wait_for_service_deletion:
+            Type: Wait
+            Seconds: 3
+            Next: service_status
+          service_status:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-service_status
+            Next: is_service_deleted
+          is_service_deleted:
+            Type: Choice
+            Choices:
+              - Variable: "$.status"
+                StringEquals: INACTIVE
+                Next: delete_listener_and_tg
+              - Variable: "$.status"
+                StringEquals: DRAINING
+                Next: wait_for_service_deletion
+            Default: wait_for_service_deletion
+          delete_listener_and_tg:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-delete_listener_and_tg
+            Catch:
+              - ErrorEquals:
+                - States.TaskFailed
+                - Lambda.Unknown
+                Next: catch_error
+            End: true
+          catch_error:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-catch_sfn_error
+            End: true
+
+plugins:
+  - serverless-step-functions
+  - serverless-pseudo-parameters
+  - serverless-prune-plugin

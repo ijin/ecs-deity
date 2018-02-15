@@ -1,0 +1,17 @@
+# Note: Stage name only allows a-zA-Z0-9_.
+dev:
+  vpc_id: "vpc-xxxxx"
+  cluster: "my-cluster"
+  container_name: "app"
+  container_port: 4567
+  task_def: "app-dev-feature"
+  lb_arn: "arn:aws:elasticloadbalancing:ap-northeast-1:xxxxxxxxxxxxx:loadbalancer/app/my-app-dev/yyyyyyyyyyyyy"
+  health_check:
+    path: "/"
+    interval: 20
+  port_range: "8000-8100"
+  branch_prefix: "feature"
+  sns_arn: "arn:aws:sns:ap-northeast-1:xxxxxxxxxxxxx:slack"
+  deploy_lambda_arn: "arn:aws:lambda:ap-northeast-1:xxxxxxxxxxxxx:function:ci-deploy"
+  slack:
+    channel: "#test"
