@@ -1,6 +1,6 @@
 # ECS Deity
 
-creates and destroys on-demand environments through separate ECS services
+Creates and destroys on-demand environments through separate ECS services
 
 ## Install
 
