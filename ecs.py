@@ -226,7 +226,7 @@ def destroy(event, context):
     # TODO: combine with stop_tasks?
 
     print(data)
-    return(data) # pass to stop_tasks
+    return data # pass to stop_tasks
 
 # input: { "cluster": CLUSTER, "service": SERVICE }
 def stop_tasks(event, context):
@@ -241,7 +241,7 @@ def stop_tasks(event, context):
     if any(s.get('status', None) != 'INACTIVE' for s in current_services):
         response = ecs.update_service(cluster=cluster, service=service, desiredCount=0)
         print(response)
-    return(event)
+    return event
 
 # input: { "cluster": CLUSTER, "service": SERVICE }
 def task_status(event, context):
@@ -259,7 +259,7 @@ def task_status(event, context):
         notify.send("tasks: running")
     print(status)
     event['task'] = status
-    return(event)
+    return event
 
 # input: { "cluster": CLUSTER, "service": SERVICE }
 def delete_service(event, context):
@@ -271,7 +271,7 @@ def delete_service(event, context):
     if any(s.get('status', None) != 'INACTIVE' for s in current_services):
         response = ecs.delete_service(cluster=cluster, service=service)
         print(response)
-    return(event)
+    return event
 
 # input: { "cluster": CLUSTER, "service": SERVICE }
 def service_status(event, context):
@@ -287,7 +287,7 @@ def service_status(event, context):
     else:
         notify.send("service: " + status)
     event['status'] =  status
-    return(event)
+    return event
 
 def get_listener_arn(lb_arn, tg_arn):
     listeners = alb.describe_listeners(LoadBalancerArn=lb_arn)['Listeners']
