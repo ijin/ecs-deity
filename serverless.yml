@@ -63,7 +63,7 @@ functions:
       health_check_healthy_count: ${self:custom.${self:provider.stage}.health_check.healthy_count, ''}
       health_check_unhealthy_count: ${self:custom.${self:provider.stage}.health_check.unhealthy_count, ''}
       health_check_matcher: ${self:custom.${self:provider.stage}.health_check.matcher, ''}
-      branch_prefix: ${self:custom.${self:provider.stage}.branch_prefix, ''}
+      branch_prefix: ${self:custom.${self:provider.stage}.branch_prefix, 'feature'}
       create_sfn_arn: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-${self:provider.stage}-create
       delete_sfn_arn: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-${self:provider.stage}-destroy
     events:
