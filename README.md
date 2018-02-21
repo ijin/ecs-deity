@@ -16,6 +16,8 @@ For example, when a branch named `feature/test123` is pushed for a repository na
 
 ![ecs deity create](https://lh3.googleusercontent.com/FdRvgy-OwOnIN0ouQWsNV-JeiBURfOujH49arMUpqkCZZTBnYRcpUTuO1xwc4fvHQqCcgzDpyWIe-yUkMh55_GUGMJaotRqhjdj7QfVi7dBv4UyJOF9A4WCggIlouYDDtCxHujluaw=w600-h346-no)
 
+![ecs](https://lh3.googleusercontent.com/-hZbYCR6GRHWGdTW0xVWrU3NDFhC0N_ssnlkDK9xVX0Vg4zzEZ71VH5JkqS5a_-MsM1DAqpc5ZmeAOIstyxanph4lj8KirUByprjXlN2V0VKfqYLcg42Vb1-lyd3MoBRv5NVsgnozw=w589-h359-no)
+
 Any necessary app-specific deployments like database migration, data loading, etc. are de-coupled. A lambda arn is configurable for such tasks.
 
 Notifications to the user are sent via SNS. 
