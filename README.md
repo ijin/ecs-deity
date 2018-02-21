@@ -14,11 +14,11 @@ For example, when a branch named `feature/test123` is pushed for a repository na
 - ALB listner with a random port which routes to the target group
 - ECS service named `my-project-test123-service`
 
+![ecs deity create](https://lh3.googleusercontent.com/FdRvgy-OwOnIN0ouQWsNV-JeiBURfOujH49arMUpqkCZZTBnYRcpUTuO1xwc4fvHQqCcgzDpyWIe-yUkMh55_GUGMJaotRqhjdj7QfVi7dBv4UyJOF9A4WCggIlouYDDtCxHujluaw=w600-h346-no)
+
 Any necessary app-specific deployments like database migration, data loading, etc. are de-coupled. A lambda arn is configurable for such tasks.
 
 Notifications to the user are sent via SNS. 
-
-![ecs deity create](https://lh3.googleusercontent.com/FdRvgy-OwOnIN0ouQWsNV-JeiBURfOujH49arMUpqkCZZTBnYRcpUTuO1xwc4fvHQqCcgzDpyWIe-yUkMh55_GUGMJaotRqhjdj7QfVi7dBv4UyJOF9A4WCggIlouYDDtCxHujluaw=w600-h346-no)
 
 ## Pre-requisites
 
@@ -28,7 +28,7 @@ A lambda function which handles deployment (can be blank)
 
 ## Install
 
-```
+```bash
 npm install -g serverless
 sls plugin install -n serverless-step-functions
 sls plugin install -n serverless-pseudo-parameters
@@ -39,7 +39,7 @@ sls plugin install -n serverless-prune-plugin
 
 Edit conf.yml
 
-```
+```bash
 sls deploy -s dev
 ```
 
@@ -47,7 +47,7 @@ sls deploy -s dev
 
 ### YAML file
 
-look at conf.yml.example
+look at `conf.yml.example`
 
 ### GitHub
 
