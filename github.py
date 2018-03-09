@@ -4,6 +4,8 @@ from datetime import date, datetime
 import os
 import json
 import boto3
+import urlparse
+from botocore.vendored import requests
 
 sfn = boto3.client('stepfunctions', region_name=os.environ['AWS_REGION'])
 
@@ -45,6 +47,7 @@ def sfn_json(data, stg):
     print(json)
     return json
 
+# {"ref": "feature/test", "repository": {"name": "ci-rack"}, "ref_type": "branch"}
 def step_function(event, context):
     print("Received event: " + json.dumps(event, indent=2))
     body = json.loads(event['body'])
@@ -70,6 +73,43 @@ def step_function(event, context):
     else:
         return respond(ValueError("Invalid GitHub event type"))
 
+# body['text']='trigger_word branch_name'
+def chat_ops(event, context):
+    print("Received event: " + json.dumps(event, indent=2))
+    body = {k: v[0] for k,v in urlparse.parse_qs(event['body']).items()}
+    repo = body['text'].split()[0]
+    branch = body['text'].split()[1]
+    stage = event['requestContext']['stage']
+
+    if body['trigger_word'] != stage:
+        return respond(None, {"text": "invalid repository"})
+    if not applicable_branch(branch):
+        return respond(None, {"text": "not applicable branch name"})
+
+    message =  "Going to create " + repo + " env for `" + branch + "`"
+    j = { "text": message }
+
+    data =  {
+        "ref": branch,
+        "repository": {"name": repo},
+        "ref_type": "branch"
+    }
+    gw_url = os.environ['gw_url']  + "/github"
+    r = requests.post(gw_url, json=data, headers={"X-GitHub-Event": "create"})
+    print(r.status_code, r.reason)
+
+    return respond(None, j)
+    
+
+#    body = {
+#        "repository": {
+#            "name": my-repo
+#        },
+#        "ref": my-branch
+#    }
+#
+    
+    
 def applicable_branch(branch):
     branch_prefix = os.environ['branch_prefix']
     if branch.split('/')[0] != branch_prefix:

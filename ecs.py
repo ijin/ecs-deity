@@ -9,6 +9,7 @@ from notification import SnsNotification
 region = os.getenv('AWS_REGION','ap-northeast-1')
 SNS_ARN = os.environ['sns_arn']
 CHANNEL = os.environ['channel']
+REPO_OMMIT = os.environ['repo_ommit']
 alb = boto3.client('elbv2', region_name=region)
 ecs = boto3.client('ecs', region_name=region)
 icon = 'https://s3-us-west-2.amazonaws.com/assets.site.serverless.com/blog/step-functions.png'
@@ -30,7 +31,7 @@ def create(event, context):
 
     body = event['body']
     branch = body['ref']
-    app = body['repository']['name']
+    app = (body['repository']['name']).replace(REPO_OMMIT,'')
     tg_branch = branch.rsplit('/', 1)[-1]
     tg = app + '-' + tg_branch + '-tg'
     service = app + '-' + tg_branch + '-service'
@@ -210,7 +211,7 @@ def destroy(event, context):
     body = event['body']
     branch = body['ref']
     tg_branch = branch.rsplit('/', 1)[-1]
-    app = body['repository']['name']
+    app = (body['repository']['name']).replace(REPO_OMMIT,'')
     tg = app + '-' + tg_branch + '-tg'
     service = app + '-' + tg_branch + '-service'
     

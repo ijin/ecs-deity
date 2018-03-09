@@ -13,6 +13,7 @@ provider:
   environment:
     sns_arn: ${self:custom.${self:provider.stage}.sns_arn}
     channel: ${self:custom.${self:provider.stage}.slack.channel}
+    repo_ommit: ${self:custom.${self:provider.stage}.repo_ommit, ''}
 
   iamRoleStatements:
     - Effect: "Allow"
@@ -69,6 +70,15 @@ functions:
     events:
       - http:
           path: github
+          method: post
+  chat_ops:
+    handler: github.chat_ops
+    environment:
+      branch_prefix: ${self:custom.${self:provider.stage}.branch_prefix, 'feature'}
+      gw_url: { "Fn::Join" : ["", [ "https://", { "Ref" : "ApiGatewayRestApi" }, ".execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}" ] ]  }
+    events:
+      - http:
+          path: chat_ops
           method: post
   create:
     handler: ecs.create
@@ -146,7 +156,7 @@ stepFunctions:
                 Next: wait_for_service_creation
             Default: wait_for_service_creation
           ecs_deploy:
-            Type: Task
+            Type: Task # maybe pass
             Resource: ${self:custom.${self:provider.stage}.deploy_lambda_arn}
             Catch:
               - ErrorEquals:

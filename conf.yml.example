@@ -11,6 +11,7 @@ dev:
     interval: 20
   port_range: "8000-8100"
   branch_prefix: "feature"
+  repo_ommit: "my_company-"
   sns_arn: "arn:aws:sns:ap-northeast-1:xxxxxxxxxxxxx:slack"
   deploy_lambda_arn: "arn:aws:lambda:ap-northeast-1:xxxxxxxxxxxxx:function:ci-deploy"
   slack:
