@@ -1,0 +1,11 @@
+{
+  "name": "ecs-deity",
+  "description": "",
+  "version": "0.1.0",
+  "dependencies": {},
+  "devDependencies": {
+    "serverless-prune-plugin": "^1.3.0",
+    "serverless-pseudo-parameters": "^1.4.1",
+    "serverless-step-functions": "^1.3.0"
+  }
+}
