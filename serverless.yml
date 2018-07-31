@@ -49,7 +49,11 @@ functions:
   github:
     handler: github.step_function
     environment:
+      launch_type: ${self:custom.${self:provider.stage}.launch_type, 'ec2'}
       vpc_id: ${self:custom.${self:provider.stage}.vpc_id}
+      subnets: ${self:custom.${self:provider.stage}.subnets, ''}
+      security_groups: ${self:custom.${self:provider.stage}.security_groups, ''}
+      assign_public_ip: ${self:custom.${self:provider.stage}.assign_public_ip, 'enabled'}
       cluster: ${self:custom.${self:provider.stage}.cluster}
       container_name: ${self:custom.${self:provider.stage}.container_name}
       container_port: ${self:custom.${self:provider.stage}.container_port}

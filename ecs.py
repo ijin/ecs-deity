@@ -20,7 +20,12 @@ notify = SnsNotification(region, SNS_ARN, CHANNEL, username='ecs deity', icon_ur
 def create(event, context):
     print("Received event: " + json.dumps(event, indent=2))
 
+    launch_type = event['launch_type'].upper()
+    target_type = 'ip' if launch_type == 'FARGATE' else 'INSTANCE'
     vpc_id = event['vpc_id']
+    subnets = event['subnets']
+    sg = event['security_groups']
+    ip = event['assign_public_ip'].upper()
     cluster = event['cluster']
     lb_arn = event['lb_arn']
     health_check = event['health_check']
@@ -41,9 +46,9 @@ def create(event, context):
     msg = "Creating " + app + " environment for `" + branch + "` branch..."
     notify.send(msg)
 
-    tg_arn = create_alb_target_group(tg, vpc_id, health_check=health_check)
+    tg_arn = create_alb_target_group(tg, vpc_id, health_check=health_check, target_type=target_type)
     listener_arn = create_alb_listener(lb_arn, tg_arn, port)
-    ecs_response = create_ecs_service(cluster, service, task_def, tg_arn, container_name=container_name, container_port=container_port, count=2)
+    ecs_response = create_ecs_service(cluster, service, task_def, tg_arn, container_name=container_name, container_port=container_port, count=2, launch_type=launch_type, subnets=subnets, sg=sg, ip=ip)
 
     if not ecs_response:
         event['branch'] = "none"
@@ -148,31 +153,45 @@ def create_alb_listener(lb_arn, tg_arn, port, protocol='HTTP', policy=None, cert
     notify.send("> ALB listener: " + arn)
     return arn
 
-def create_ecs_service(cluster, service, taskdef, tg_arn, container_name='app', container_port=80, count=1, launch_type='EC2', role='ecsServiceRole', min_pct=50, max_pct=200, **kwargs):
+def create_ecs_service(cluster, service, taskdef, tg_arn, container_name='app', container_port=80, count=1, launch_type='EC2', subnets='', sg='', ip='ENABLED', role='ecsServiceRole', min_pct=50, max_pct=200, **kwargs):
     current_services = ecs.describe_services(cluster=cluster, services=[service])['services']
     if any(s.get('status', None) != 'INACTIVE' for s in current_services):
         notify.send("> :ghost: ECS service already exists: " + service)
         return None
+
+    service_args = {
+        'cluster': cluster,
+        'serviceName': service,
+        'taskDefinition' : taskdef,
+        'loadBalancers': [
+            {
+                'targetGroupArn': tg_arn,
+                'containerName': container_name,
+                'containerPort': container_port
+            },
+        ],
+        'desiredCount': count,
+        'launchType' : launch_type,
+        'deploymentConfiguration': {
+            'minimumHealthyPercent': min_pct,
+            'maximumPercent': max_pct
+        },
+    }
+
+    # TODO: get from taskdef? (may use awsvpc w/o fargate)
+    if launch_type == 'FARGATE':
+        service_args['networkConfiguration'] = {
+            'awsvpcConfiguration': {
+                'subnets': subnets.split(','),
+                'securityGroups': sg.split(','),
+                'assignPublicIp': ip
+            }
+        }
+    else:
+        service_args['role'] = role
     
-    response = ecs.create_service(
-                    cluster=cluster,
-                    serviceName=service,
-                    taskDefinition=taskdef,
-                    loadBalancers=[
-                        {
-                            'targetGroupArn': tg_arn,
-                            'containerName': container_name,
-                            'containerPort': container_port
-                        },
-                    ],
-                    desiredCount=count,
-                    launchType=launch_type,
-                    role=role,
-                    deploymentConfiguration={
-                        'minimumHealthyPercent': min_pct,
-                        'maximumPercent': max_pct
-                    }
-                )
+    print service_args
+    response = ecs.create_service(**service_args)
     print response
     notify.send("> ECS service: " + service)
     return response

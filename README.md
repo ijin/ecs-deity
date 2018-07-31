@@ -1,6 +1,6 @@
 # ECS Deity
 
-Creates and destroys on-demand environments through separate ECS services
+Creates and destroys on-demand environments through separate ECS services. Works on ECS and Fargate.
 
 ![ecs deity diagram](https://lh3.googleusercontent.com/9eXmgANkPMjNl7UeWqcwuP4M5-xuGnhyWxSNfUagJWniwnnpxv4I-owKDQld-nJx8pI5joskjsRgEnihSrcLP6r44OLS1N0oAwsD0SnqKINu98zhAKQ668e8N6jvO8gZ-A_RXyCJPA=w824-h367-no)
 
@@ -53,7 +53,7 @@ look at `conf.yml.example`
 
 ### GitHub
 
-1. Add API Gateways's endpoint as GitHub's webhook
+1. Add API Gateways's endpoint as GitHub's webhook (https://xxxx/github)
 2. Configure trigger events (create, delete)
 
 ![GitHub webhook config](https://lh3.googleusercontent.com/ZRyW_XGsRLFHgS3cTA8gzNQdqRMH3PBGt4G1qfCHshTYgNQR_4ZO_I5mINBfP7saKQwcJ-bfpJzbOQiPCKbrhUU8s-JPVNF8dmgcI3aR8RVCgB5aoaS2ye1RJEcI0afBWY0uzdf2Bw=w509-h164-no)
@@ -75,4 +75,15 @@ It's best to only build on pull requests if you use CircleCI for deployments to 
 
 ![CircleCI confi](https://lh3.googleusercontent.com/vjkdZudv3amafajN7aDLPHR1YjIRLRzlHsgxMY_p433u897T43hc4SMBi7B37Wq6GBFRexNyAtpzZogGvCdhif1YiqJq3aYyw-WNXo7svMINbdiL5iVZSeEADAt9ALM75u7Asy7qxw=w700-h144-no)
 
+## ChatOps
 
+You can also manually create environments through chatops.
+
+Steps.
+
+0. optionally disable github's create trigger
+1. create a serverless framework stage environment (this will be your trigger word. ex. `dev`)
+2. configure slack's outgoing webhook to the API gw path (https://xxxx/chat_ops) and set the trigger to the above stage (ex. `dev`) in a desired channel
+3. create an environment by typing `[stage] [branch]` (ex. `dev feature/test`) in the configured channel
+
+Happy Chat-Opsing!

@@ -25,7 +25,11 @@ def json_serial(obj):
 
 def sfn_json(data, stg):
     json = {
+        'launch_type': os.environ['launch_type'],
         'vpc_id': os.environ['vpc_id'],
+        'subnets': os.environ['subnets'],
+        'security_groups': os.environ['security_groups'],
+        'assign_public_ip': os.environ['assign_public_ip'],
         'cluster': os.environ['cluster'],
         'container_name': os.environ['container_name'], 'container_port': os.environ['container_port'],
         'task_def': os.environ['task_def'],
