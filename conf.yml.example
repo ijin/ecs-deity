@@ -16,3 +16,24 @@ dev:
   deploy_lambda_arn: "arn:aws:lambda:ap-northeast-1:xxxxxxxxxxxxx:function:ci-deploy"
   slack:
     channel: "#test"
+fargate:
+  launch_type: "fargate"
+  vpc_id: "vpc-xxxxx"
+  subnets: "subnet-aaaaa,subnet-bbbbb"
+  security_groups: "sg-xxxxx,sg-yyyyy"
+  assign_public_ip: "enabled" # or disabled
+  cluster: "my-fargate-cluster"
+  container_name: "app"
+  container_port: 4567
+  task_def: "app-dev-feature-fargate"
+  lb_arn: "arn:aws:elasticloadbalancing:ap-northeast-1:xxxxxxxxxxxxx:loadbalancer/app/my-app-dev-fargate/yyyyyyyyyyyyy"
+  health_check:
+    path: "/"
+    interval: 20
+  port_range: "8000-8100"
+  branch_prefix: "feature"
+  repo_ommit: "my_company-"
+  sns_arn: "arn:aws:sns:ap-northeast-1:xxxxxxxxxxxxx:slack"
+  deploy_lambda_arn: "arn:aws:lambda:ap-northeast-1:xxxxxxxxxxxxx:function:ci-deploy"
+  slack:
+    channel: "#test"
